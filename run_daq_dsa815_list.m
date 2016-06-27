@@ -16,11 +16,12 @@ mkdir(dir_name);
 cd(dir_name);
 
 %% DAQ
-clc
+clc;
 
 % DAQ parameters
-nShots = 100;     % number of traces to save
+nShots = 100;     	% number of traces to save
 waittime = 0.3;
+k_pass = 0.15;		% max amount of shift in peak from center to pass
 
 % Connect to instrument
 vhwinfo = instrhwinfo('visa','ni');
@@ -38,21 +39,15 @@ fprintf(vObj,':CALibration:AUTO OFF');  % turn auto-calib off
 for iParam=1:length(PARAM_LIST)
     params = PARAM_LIST(iParam,:);
     
-    % Get spectrum analyser settings: params=[RBW, VBW, SWT, SPAN]
-    RBW = params(1);
-    VBW = params(2);
-    SWT = params(3);
-    SPAN = params(4);
-    
-    % autosearch peak first
+    % autosearch peak
     fprintf(vObj,':SENSe:POWer:ATUNe');
     pause(5);   % wait until autosearch completes
     
-    % Set spectrum analyser params to user input
-    fprintf(vObj,[':SENSe:BANDwidth:RESolution ', num2str(RBW)]);
-    fprintf(vObj,[':SENSe:BANDwidth:video ', num2str(VBW)]);
-    fprintf(vObj,[':SENSe:SWEep:TIME ', num2str(SWT)]);
-    fprintf(vObj,[':SENSe:FREQuency:SPAN ', num2str(SPAN)]);
+    % Set spectrum analyser params to user input: params=[RBW, VBW, SWT, SPAN]
+    fprintf(vObj,[':SENSe:BANDwidth:RESolution ', num2str(params(1))]);
+    fprintf(vObj,[':SENSe:BANDwidth:video ', num2str(params(2))]);
+    fprintf(vObj,[':SENSe:SWEep:TIME ', num2str(params(3))]);
+    fprintf(vObj,[':SENSe:FREQuency:SPAN ', num2str(params(4))]);
     
     % Get spectrum analyser param settings (may be different to user input)
     fprintf(vObj,':SENSe:BANDwidth:RESolution?');
@@ -64,32 +59,42 @@ for iParam=1:length(PARAM_LIST)
     fprintf(vObj,':SENSe:FREQuency:SPAN?');
     params(4)=fscanf(vObj,'%d');
     
-    pause(SWT+waittime);
+	fprintf(vObj,':CALCulate:MARKer1:CPEak:STATe ON');	% enable cont peak search on Mkr1
     fprintf(vObj,':CALCulate:MARKer1:PEAK:SET:CF');     % re-center spectrum
     
     % Take spectrum data
     trace_data = cell(nShots,1);
     CF = zeros(nShots,1);
     fprintf(vObj,':INITiate:CONTinuous OFF');
-    for iShot=1:nShots
+	
+	% take spectrum measurement until 'nShots' centered shots are acquired
+	iShot = 1;
+    while iShot<n+1
         % run a single shot
         fprintf(vObj,':INITiate:IMMediate');
-        pause(SWT+waittime);   % wait until sweep ends
-        
-        % get trace amplitude
-        fprintf(vObj,':TRACe:DATA? TRACE1');
-        fscanf(vObj,'%c',1);
-        nheader=fscanf(vObj,'%c',1);
-        fscanf(vObj,'%c',str2num(nheader));
-        trace_data{iShot} = fscanf(vObj);
-        
-        % get freq data: CF
-        fprintf(vObj,':SENSe:FREQuency:CENTer?');
-        CF(iShot) = fscanf(vObj,'%d');
-        
-        % get current spectrum and shift peak to CF
-%         fprintf(vObj,':INITiate:IMMediate');
-%         pause(SWT+waittime);
+        pause(params(3)+waittime);   % wait until sweep ends
+		
+		% check if peak is well captured
+		fprintf(vObj,':SENSe:FREQuency:CENTer?');	% center frequency
+		CF_temp = fscanf(vObj,'%d');
+		fprintf(vObj,':CALCulate:MARKer1:X?');		% peak frequency
+		PF_temp=fscanf(vObj,'%d');
+		
+		if abs(PF_temp-CF_temp)<k_pass*params(4)
+			% get trace amplitude
+			fprintf(vObj,':TRACe:DATA? TRACE1');
+			fscanf(vObj,'%c',1);
+			nheader=fscanf(vObj,'%c',1);
+			fscanf(vObj,'%c',str2num(nheader));
+			trace_data{iShot} = fscanf(vObj);
+			
+			% get freq data: CF
+			CF(iShot) = CF_temp;
+			
+			iShot=iShot+1;
+        end
+		
+		% update CF of scan to this shot's peak frequency (accounts for beatnote drifting out of scan range)
         fprintf(vObj,':CALCulate:MARKer1:PEAK:SET:CF');
     end
     
@@ -97,5 +102,5 @@ for iParam=1:length(PARAM_LIST)
     save(num2str(iParam),'params','trace_data','CF','nShots');
 end
 
-fclose(vObj);   % close communication
+fclose(vObj);   % close communication with instrument
 cd ..
