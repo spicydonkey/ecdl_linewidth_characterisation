@@ -17,7 +17,7 @@ f_cent = freq(ind_peak);                % central frequency of peak power
 freq_shifted = freq - f_cent;   % peak centered frequency
 pwr_lin = 10.^(pwr_dBm/10);     % power in mW
 
-Df_cent = 0.5e6;      % width of central peak - Gaussian fitting region
+Df_cent = 1e6;      % width of central peak - Gaussian fitting region
 
 % cull tails
 Df_analyse = 2*Df_cent;     % width of tail - Lorentzian

@@ -5,7 +5,7 @@
 clear all; close all;
 
 lib_script = 'C:\Users\HE BEC\Dropbox\PhD\lab\ecdl\characterisation\linewidth\code';
-lib_data = 'C:\Users\HE BEC\Dropbox\PhD\lab\ecdl\characterisation\linewidth\todo';
+lib_data = 'C:\Users\HE BEC\Dropbox\PhD\lab\ecdl\characterisation\linewidth\280616';
 
 addpath(genpath(lib_script));
 addpath(genpath(lib_data));
