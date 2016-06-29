@@ -147,7 +147,5 @@ grid on;
 title('Heterodyne beatnote spectrum');
 xlabel('freq (Hz)');
 ylabel('power (dBm)');
-
-legend('data (peak)','data (tail)','Gaussian fit','Lorentzian fit (unbounded params)','Lorentzian fit (peak and centre bound)');
 set(gcf, 'Position', get(0,'Screensize'));
-pause(0.1);     %TODO: figure position doesn't update before saving to disk
+legend('data (peak)','data (tail)','Gaussian fit','Lorentzian fit (unbounded params)','Lorentzian fit (peak and centre bound)');

@@ -1,0 +1,6 @@
+% Script to perform statistical analysis on analysed linewidth data
+
+% directory with the analysis data '<exp_number>_analysis.mat'
+lib_data = 'C:\Users\HE BEC\Dropbox\PhD\lab\ecdl\characterisation\linewidth\280616\A';
+
+cd(lib_data)
